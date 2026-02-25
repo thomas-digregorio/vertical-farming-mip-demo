@@ -3,12 +3,14 @@ __pycache__/
 .pytest_cache/
 .venv/
 .env
+.artifacts/
 
 # Generated data and outputs
 data/*
 !data/.gitkeep
 outputs/*
 !outputs/.gitkeep
+configs/dashboard_runtime.yaml
 
 # Spark artifacts
 spark-warehouse/

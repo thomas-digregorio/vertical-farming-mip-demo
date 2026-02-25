@@ -71,6 +71,33 @@ class SolverConfig:
 
 
 @dataclass(frozen=True)
+class GCPConfig:
+    project_id: str = "vertical-farming-mip-demo"
+    region: str = "us-central1"
+    bucket: str = "vertical-farming-mip-demo-vfarm-data"
+    bucket_location: str = "US"
+    staging_prefix: str = "vfarm/staging"
+    dataproc_runtime_version: str = "2.2"
+    batch_ttl: str = "30m"
+    budget_usd: float = 50.0
+    budget_display_name: str = "vertical-farming-mip-demo-budget"
+    enable_budget: bool = True
+    billing_account: str | None = None
+    service_account: str | None = None
+    subnet: str | None = None
+    spark_properties: tuple[str, ...] = ()
+    required_apis: tuple[str, ...] = (
+        "dataproc.googleapis.com",
+        "storage.googleapis.com",
+        "compute.googleapis.com",
+        "logging.googleapis.com",
+        "monitoring.googleapis.com",
+        "cloudbilling.googleapis.com",
+        "billingbudgets.googleapis.com",
+    )
+
+
+@dataclass(frozen=True)
 class AppConfig:
     seed: int
     weeks: int
@@ -84,6 +111,7 @@ class AppConfig:
     costs: CostConfig = field(default_factory=CostConfig)
     paths: PathConfig = field(default_factory=PathConfig)
     solver: SolverConfig = field(default_factory=SolverConfig)
+    gcp: GCPConfig = field(default_factory=GCPConfig)
     initial_wip: dict[str, dict[int, int]] = field(default_factory=dict)
 
     @property
@@ -131,6 +159,7 @@ def load_config(path: str | Path) -> AppConfig:
         costs=CostConfig(**raw.get("costs", {})),
         paths=PathConfig(**raw.get("paths", {})),
         solver=SolverConfig(**raw.get("solver", {})),
+        gcp=GCPConfig(**_normalize_gcp(raw.get("gcp", {}))),
         initial_wip=initial_wip,
     )
 
@@ -141,4 +170,13 @@ def _normalize_initial_wip(raw_initial_wip: dict[str, Any]) -> dict[str, dict[in
         if not isinstance(by_age, dict):
             raise ValueError(f"initial_wip[{crop}] must be a dict of age->quantity.")
         normalized[crop] = {int(age): int(qty) for age, qty in by_age.items()}
+    return normalized
+
+
+def _normalize_gcp(raw_gcp: dict[str, Any]) -> dict[str, Any]:
+    normalized = dict(raw_gcp)
+    if "required_apis" in normalized and normalized["required_apis"] is not None:
+        normalized["required_apis"] = tuple(str(v) for v in normalized["required_apis"])
+    if "spark_properties" in normalized and normalized["spark_properties"] is not None:
+        normalized["spark_properties"] = tuple(str(v) for v in normalized["spark_properties"])
     return normalized

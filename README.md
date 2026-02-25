@@ -1,31 +1,32 @@
-# Vertical Farming Mixed Interger Programming Demo (Spark + Pyomo + HiGHS)
+# Vertical Farming MIP Demo (Spark + Pyomo + HiGHS + Streamlit + GCP)
 
-Synthetic indoor vertical farm planning demo over a weekly horizon. The project:
+Synthetic indoor vertical-farm planning demo over a weekly horizon.
 
-- Generates realistic synthetic daily telemetry/demand/price data with local PySpark.
-- Aggregates to weekly optimization input tables.
-- Solves a mixed-integer planning model in Pyomo with HiGHS.
-- Produces solution CSV/JSON outputs and a simple report with plots.
+This repo supports:
+- Local run: generate synthetic data, aggregate, optimize, report.
+- GCP run: Dataproc Serverless Spark jobs for generation/aggregation.
+- Interactive dashboard: tweak config, run workflows, inspect outputs, show tech stack.
 
-## What The Optimization Includes
+## Core Optimization Features
 
-- Weekly horizon (default 12 weeks)
-- 6 leafy green crops, all output in lbs
-- Hard demand via production balance: `produced_lbs = demand_lbs + waste_lbs`
-- Harvest window per crop: `g_min..g_max` weeks after planting
-- Integer planting and harvest decisions
-- Age-indexed WIP inventory dynamics
-- Rack capacity on total WIP trays
-- Labor capacity with binary overtime blocks + per-hour overtime premium
-- Binary shift variable (`yShift[t]`) that reduces harvest-processing labor per tray (no extra processing capacity)
-- Weekly energy cost proportional to WIP trays
+- Weekly horizon (default 12)
+- 6 crops (lbs output)
+- Harvest windows (`g_min..g_max`)
+- Integer planting/harvest decisions
+- Age-indexed WIP tray dynamics
+- Rack/labor/process constraints
+- Overtime blocks (binary) + per-hour premium
+- Shift binary that reduces harvest labor (no process capacity increase)
+- Energy cost proportional to WIP
+- Hard demand through balance: `produced = demand + waste` (no slack variables)
 
 ## Requirements
 
 - Python 3.11+
-- Java installed (for local Spark)
+- Java runtime for local Spark (optional; code falls back to pandas parquet path if Java is unavailable)
+- `gcloud` CLI for GCP commands
 
-Install dependencies:
+Install Python deps:
 
 ```bash
 pip install -r requirements.txt
@@ -37,138 +38,130 @@ pip install -r requirements.txt
 .
 ├── configs/
 │   └── base.yaml
+├── jobs/
+│   ├── agg_data_job.py
+│   ├── gen_data_job.py
+│   └── run_all_spark_job.py
 ├── src/vfarm/
-│   ├── __init__.py
-│   ├── __main__.py
 │   ├── cli.py
 │   ├── config.py
+│   ├── dashboard_app.py
+│   ├── gcp.py
 │   ├── optimize.py
 │   ├── report.py
 │   ├── spark_aggregate.py
 │   ├── spark_generate.py
 │   └── utils.py
+├── dashboard.py
 ├── tests/
-│   ├── conftest.py
-│   └── test_pipeline.py
-├── data/                  # generated parquet (gitignored)
-├── outputs/               # solver/report outputs (gitignored)
-├── requirements.txt
-└── README.md
+├── data/         # gitignored generated parquet
+├── outputs/      # gitignored outputs/reports/manifests
+└── requirements.txt
 ```
 
 ## Configuration
 
-Primary config is YAML: `configs/base.yaml`.
+Main config is `configs/base.yaml`.
 
-Main knobs:
+Important knobs:
+- Scale: `weeks`, `crops`, `data_mode`
+- Capacities and costs under `capacity`
+- Crop windows/yields under `crop_params`
+- Demand and energy generation under `demand`, `energy_price`
+- GCP under `gcp`:
+  - `project_id`, `region`, `bucket`, `bucket_location`
+  - `dataproc_runtime_version`
+  - `budget_usd` and budget metadata
 
-- `weeks`, `crops`
-- `data_mode`: `rows` (default) or `counts`
-- Growth windows: `g_min_weeks`, `g_max_weeks`
-- Yield/shrink/crop labor/energy/cost parameters
-- Capacities: rack, labor, process
-- Overtime blocks/hours/premium
-- Shift fixed cost and labor reduction percentage
-- Demand/energy synthetic process parameters
-- Seed for reproducibility
-
-## Run Commands
-
-Because source is under `src/`, use `PYTHONPATH=src`:
+## Local CLI Usage
 
 ```bash
 PYTHONPATH=src python -m vfarm.cli gen-data --config configs/base.yaml
 PYTHONPATH=src python -m vfarm.cli agg-data --config configs/base.yaml
 PYTHONPATH=src python -m vfarm.cli solve --config configs/base.yaml
 PYTHONPATH=src python -m vfarm.cli report --config configs/base.yaml
-```
-
-Or run everything:
-
-```bash
 PYTHONPATH=src python -m vfarm.cli run-all --config configs/base.yaml
 ```
 
 Optional flags:
+- `solve --tee`
+- `solve --feasibility-only`
+- `report --no-plots`
 
-- Solver log streaming: `solve --tee`
-- Feasibility check only (no solve): `solve --feasibility-only`
-- Skip plots in report: `report --no-plots`
+## Streamlit Dashboard
 
-## Generated Data (Raw)
+Run:
 
-Written to `data/raw/` parquet:
+```bash
+PYTHONPATH=src streamlit run dashboard.py
+```
 
-- `telemetry_tray_daily.parquet`
-- `demand_daily.parquet`
-- `prices_energy_daily.parquet`
-- `crop_params.parquet`
+Dashboard tabs:
+- `Config`: interactive YAML parameter editing
+- `Run Local`: run `gen/agg/solve/report/run-all`
+- `Run GCP`: setup/upload/submit/status for Dataproc
+- `Results`: cost metrics, utilization charts, schedule tables
+- `Tech Stack`: architecture + commands for demo presentation
 
-## Aggregated Inputs (Weekly)
+## GCP Rollout Commands
 
-Written to `data/agg/` parquet (and convenience CSV):
+Make sure auth is configured first:
 
-- `demand_weekly`
-- `energy_price_weekly`
-- `crop_params`
-- `telemetry_weekly`
+```bash
+gcloud auth login
+gcloud auth application-default login
+gcloud config set project vertical-farming-mip-demo
+```
 
-## Optimization Outputs
+Then from this repo:
 
-Written to `outputs/`:
+```bash
+PYTHONPATH=src python -m vfarm.cli gcp-setup --config configs/base.yaml
+PYTHONPATH=src python -m vfarm.cli gcp-upload --config configs/base.yaml
+PYTHONPATH=src python -m vfarm.cli gcp-submit-gen --config configs/base.yaml --wait
+PYTHONPATH=src python -m vfarm.cli gcp-submit-agg --config configs/base.yaml --wait
+# preferred single-batch path:
+PYTHONPATH=src python -m vfarm.cli gcp-submit-run-all --config configs/base.yaml --wait
+```
 
+Check a batch:
+
+```bash
+PYTHONPATH=src python -m vfarm.cli gcp-batch-status --config configs/base.yaml --batch-id <BATCH_ID>
+```
+
+What `gcp-setup` does:
+- Enables required APIs
+- Ensures target GCS bucket exists
+- Creates project budget (default `$50`) if enabled and not already present
+
+## Outputs
+
+Local outputs are in `outputs/`:
 - `solution_planting.csv`
 - `solution_harvest.csv`
 - `utilization_weekly.csv`
 - `cost_breakdown.json`
-- `solve_summary.json`
 - `report_summary.json`
 - `report_summary.md`
-- `utilization_weekly.png`
-- `production_vs_demand.png`
+- plot PNGs
+- `gcp_artifacts.json` (GCS artifact URIs for Dataproc jobs)
 
 ## Tests
-
-Run:
 
 ```bash
 PYTHONPATH=src pytest -q
 ```
 
-Tests cover:
+Current tests validate:
+- data generation files/columns/sanity
+- default config solve feasibility and demand satisfaction
+- objective monotonicity with increased rack capacity
 
-- Data generation outputs and required columns
-- Default config solves and satisfies demand
-- Objective is non-increasing when rack capacity is increased (same demand data)
+## Demo Storyline (for Portfolio)
 
-## Feasibility Diagnostics
-
-`solve` runs a pre-check before the MIP solve. It reports clear diagnostics for common infeasibility causes:
-
-- Early demand before harvest can be possible (when no initial WIP)
-- Weekly demand requiring more trays than process capacity
-- Weekly demand implying labor beyond max labor (base + overtime blocks)
-
-No slack variables are used in the model.
-
-## Scaling Guidance
-
-To scale up later, increase:
-
-- `weeks`
-- number of crops
-- demand magnitude/utilization target
-- row-granularity telemetry (`data_mode: rows`)
-
-Typical laptop-fast defaults are in `configs/base.yaml`. You can tune capacities and scenario sizes there.
-
-## Dataproc / GCP Note
-
-Spark generation and aggregation can be moved to Dataproc later:
-
-1. Upload project code/config to GCS.
-2. Submit PySpark job(s) (`spark_generate.py`, `spark_aggregate.py`) on Dataproc.
-3. Write parquet outputs to GCS.
-4. Run optimization (`optimize.py`) on a small VM or Cloud Run job that reads aggregated parquet and writes outputs.
-
-This repo does not implement cloud deployment directly; it documents the path and keeps Spark/optimization decoupled for that transition.
+1. Open Streamlit dashboard.
+2. Show config tweaks (capacity, demand, costs).
+3. Run local optimization and review utilization/cost impacts.
+4. Trigger GCP setup/upload and Dataproc submissions.
+5. Explain stack split: Spark on Dataproc, optimization with Pyomo/HiGHS.

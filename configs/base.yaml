@@ -106,4 +106,20 @@ paths:
 solver:
   name: "highs"
 
+gcp:
+  project_id: "vertical-farming-mip-demo"
+  region: "us-central1"
+  bucket: "vertical-farming-mip-demo-vfarm-data"
+  bucket_location: "US"
+  staging_prefix: "vfarm/staging"
+  dataproc_runtime_version: "2.2"
+  batch_ttl: "30m"
+  spark_properties: []
+  budget_usd: 50.0
+  budget_display_name: "vertical-farming-mip-demo-budget"
+  enable_budget: true
+  billing_account: null
+  service_account: null
+  subnet: null
+
 initial_wip: {}

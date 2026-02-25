@@ -3,6 +3,13 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+from .gcp import (
+    describe_batch,
+    setup_gcp_resources,
+    submit_gcp_batch,
+    submit_gcp_run_all,
+    upload_gcp_artifacts,
+)
 from .optimize import solve_optimization
 from .report import generate_report
 from .spark_aggregate import aggregate_data
@@ -41,6 +48,43 @@ def build_parser() -> argparse.ArgumentParser:
     add_config_arg(p_run)
     p_run.add_argument("--tee", action="store_true", help="Stream solver logs")
     p_run.add_argument("--no-plots", action="store_true", help="Skip plot generation")
+
+    p_gcp_setup = subparsers.add_parser("gcp-setup", help="Enable GCP APIs, bucket, budget")
+    add_config_arg(p_gcp_setup)
+    p_gcp_setup.add_argument(
+        "--skip-budget",
+        action="store_true",
+        help="Skip budget creation/update checks",
+    )
+
+    p_gcp_upload = subparsers.add_parser(
+        "gcp-upload", help="Upload source zip, config, and Dataproc job scripts to GCS"
+    )
+    add_config_arg(p_gcp_upload)
+
+    p_gcp_gen = subparsers.add_parser(
+        "gcp-submit-gen", help="Submit Dataproc Serverless batch for data generation"
+    )
+    add_config_arg(p_gcp_gen)
+    p_gcp_gen.add_argument("--batch-id", type=str, default=None)
+    p_gcp_gen.add_argument("--wait", action="store_true", help="Wait for batch completion")
+
+    p_gcp_agg = subparsers.add_parser(
+        "gcp-submit-agg", help="Submit Dataproc Serverless batch for weekly aggregation"
+    )
+    add_config_arg(p_gcp_agg)
+    p_gcp_agg.add_argument("--batch-id", type=str, default=None)
+    p_gcp_agg.add_argument("--wait", action="store_true", help="Wait for batch completion")
+
+    p_gcp_run_all = subparsers.add_parser(
+        "gcp-submit-run-all", help="Submit single Dataproc batch for gen+agg workflow"
+    )
+    add_config_arg(p_gcp_run_all)
+    p_gcp_run_all.add_argument("--wait", action="store_true", help="Wait for both batches")
+
+    p_gcp_status = subparsers.add_parser("gcp-batch-status", help="Describe a Dataproc batch")
+    add_config_arg(p_gcp_status)
+    p_gcp_status.add_argument("--batch-id", required=True, type=str)
 
     return parser
 
@@ -86,6 +130,50 @@ def main(argv: list[str] | None = None) -> None:
         print("Run complete. Summary:")
         for key, value in summary.items():
             print(f"- {key}: {value}")
+        return
+
+    if args.command == "gcp-setup":
+        result = setup_gcp_resources(args.config, create_budget=not args.skip_budget)
+        print("GCP setup summary:")
+        for key, value in result.items():
+            print(f"- {key}: {value}")
+        return
+
+    if args.command == "gcp-upload":
+        result = upload_gcp_artifacts(args.config)
+        print("Uploaded artifacts:")
+        for key, value in result.items():
+            print(f"- {key}: {value}")
+        return
+
+    if args.command == "gcp-submit-gen":
+        result = submit_gcp_batch(
+            args.config,
+            job_type="gen",
+            batch_id=args.batch_id,
+            wait=bool(args.wait),
+        )
+        print(result)
+        return
+
+    if args.command == "gcp-submit-agg":
+        result = submit_gcp_batch(
+            args.config,
+            job_type="agg",
+            batch_id=args.batch_id,
+            wait=bool(args.wait),
+        )
+        print(result)
+        return
+
+    if args.command == "gcp-submit-run-all":
+        result = submit_gcp_run_all(args.config, wait=bool(args.wait))
+        print(result)
+        return
+
+    if args.command == "gcp-batch-status":
+        result = describe_batch(args.config, batch_id=args.batch_id)
+        print(result)
         return
 
     raise ValueError(f"Unknown command: {args.command}")
