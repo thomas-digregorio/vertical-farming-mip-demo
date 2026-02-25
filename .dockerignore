@@ -1,0 +1,17 @@
+.git
+.gitignore
+.pytest_cache
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.venv
+.artifacts
+
+# local generated artifacts
+data/
+outputs/
+
+# docs and editor files
+.vscode/
+.idea/
