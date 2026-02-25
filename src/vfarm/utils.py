@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import timedelta
 from pathlib import Path
+import shutil
 
 import numpy as np
 import pandas as pd
@@ -54,6 +55,9 @@ def make_rng(seed: int) -> np.random.Generator:
 
 
 def build_spark_session(app_name: str) -> SparkSession:
+    if shutil.which("java") is None:
+        raise RuntimeError("Java runtime not found on PATH; Spark session cannot be started.")
+
     return (
         SparkSession.builder.appName(app_name)
         .master("local[*]")
