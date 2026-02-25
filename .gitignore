@@ -1,0 +1,19 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+.env
+
+# Generated data and outputs
+data/*
+!data/.gitkeep
+outputs/*
+!outputs/.gitkeep
+
+# Spark artifacts
+spark-warehouse/
+metastore_db/
+
+# IDE
+.vscode/
+.idea/

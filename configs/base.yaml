@@ -1,0 +1,109 @@
+seed: 20260225
+weeks: 12
+start_date: "2026-01-05"
+data_mode: "rows"
+
+crops:
+  - arugula
+  - basil
+  - kale
+  - romaine
+  - spinach
+  - mixed_greens
+
+crop_params:
+  arugula:
+    g_min_weeks: 3
+    g_max_weeks: 4
+    yield_lbs_per_tray: 1.10
+    shrink: 0.03
+    plant_hours_per_tray: 0.07
+    harvest_hours_per_tray: 0.09
+    seed_cost_per_tray: 0.18
+    nutrient_cost_per_tray_week: 0.05
+    energy_kwh_per_tray_week: 3.10
+  basil:
+    g_min_weeks: 4
+    g_max_weeks: 5
+    yield_lbs_per_tray: 1.50
+    shrink: 0.04
+    plant_hours_per_tray: 0.09
+    harvest_hours_per_tray: 0.13
+    seed_cost_per_tray: 0.24
+    nutrient_cost_per_tray_week: 0.07
+    energy_kwh_per_tray_week: 4.00
+  kale:
+    g_min_weeks: 5
+    g_max_weeks: 6
+    yield_lbs_per_tray: 2.10
+    shrink: 0.05
+    plant_hours_per_tray: 0.10
+    harvest_hours_per_tray: 0.16
+    seed_cost_per_tray: 0.28
+    nutrient_cost_per_tray_week: 0.08
+    energy_kwh_per_tray_week: 5.00
+  romaine:
+    g_min_weeks: 5
+    g_max_weeks: 6
+    yield_lbs_per_tray: 2.30
+    shrink: 0.04
+    plant_hours_per_tray: 0.11
+    harvest_hours_per_tray: 0.17
+    seed_cost_per_tray: 0.30
+    nutrient_cost_per_tray_week: 0.09
+    energy_kwh_per_tray_week: 5.20
+  spinach:
+    g_min_weeks: 4
+    g_max_weeks: 5
+    yield_lbs_per_tray: 1.40
+    shrink: 0.06
+    plant_hours_per_tray: 0.09
+    harvest_hours_per_tray: 0.14
+    seed_cost_per_tray: 0.23
+    nutrient_cost_per_tray_week: 0.07
+    energy_kwh_per_tray_week: 4.40
+  mixed_greens:
+    g_min_weeks: 3
+    g_max_weeks: 4
+    yield_lbs_per_tray: 1.00
+    shrink: 0.03
+    plant_hours_per_tray: 0.07
+    harvest_hours_per_tray: 0.10
+    seed_cost_per_tray: 0.19
+    nutrient_cost_per_tray_week: 0.05
+    energy_kwh_per_tray_week: 3.30
+
+capacity:
+  rack_capacity_trays_per_week: 1200
+  base_labor_hours_per_week: 220.0
+  base_process_capacity_trays_per_week: 240
+  overtime_block_hours: [40.0, 40.0]
+  overtime_premium_per_hour: 12.0
+  base_wage_per_hour: 24.0
+  shift_fixed_cost_per_week: 180.0
+  shift_labor_reduction_pct: 0.15
+
+demand:
+  seasonality_amplitude: 0.12
+  noise_std: 0.08
+  utilization_target: 0.70
+  safety_factor: 0.90
+
+energy_price:
+  base_per_kwh: 0.13
+  seasonality_amplitude: 0.08
+  noise_std: 0.01
+
+costs:
+  disposal_cost_per_lb_waste: 0.35
+
+paths:
+  data_dir: "data"
+  raw_subdir: "raw"
+  agg_subdir: "agg"
+  outputs_dir: "outputs"
+
+solver:
+  name: "highs"
+
+initial_wip: {}
