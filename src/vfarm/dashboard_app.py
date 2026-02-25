@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 import json
 from pathlib import Path
+import shutil
 import traceback
 from typing import Any
 
@@ -46,13 +47,6 @@ def run_dashboard() -> None:
             _load_config_into_state(Path(config_path_input))
         if col_b.button("Save", use_container_width=True):
             _save_state_config(Path(config_path_input))
-
-        st.caption("GCP context")
-        cfg = st.session_state["cfg"]
-        gcp = cfg.get("gcp", {})
-        st.write(f"Project: `{gcp.get('project_id', '-')}`")
-        st.write(f"Region: `{gcp.get('region', '-')}`")
-        st.write(f"Bucket: `{gcp.get('bucket', '-')}`")
 
     st.title("Vertical Farming MIP Demo")
     st.caption("Tweak config, run local/GCP workflows, and inspect outputs")
@@ -292,17 +286,6 @@ def _render_config_editor() -> None:
     cfg["crop_params"] = rebuilt
     cfg["crops"] = [c for c in crops if c in rebuilt]
 
-    st.subheader("GCP")
-    gcp = cfg.setdefault("gcp", {})
-    c1, c2 = st.columns(2)
-    gcp["project_id"] = c1.text_input("Project ID", value=str(gcp.get("project_id", "vertical-farming-mip-demo")))
-    gcp["region"] = c2.text_input("Region", value=str(gcp.get("region", "us-central1")))
-    c1, c2, c3 = st.columns(3)
-    gcp["bucket"] = c1.text_input("Bucket", value=str(gcp.get("bucket", "vertical-farming-mip-demo-vfarm-data")))
-    gcp["bucket_location"] = c2.text_input("Bucket location", value=str(gcp.get("bucket_location", "US")))
-    gcp["budget_usd"] = float(c3.number_input("Budget USD", min_value=1.0, value=float(gcp.get("budget_usd", 50.0))))
-
-
 def _render_local_run_tab() -> None:
     st.markdown("Run local Spark/Pandas pipeline and optimization")
 
@@ -321,6 +304,24 @@ def _render_local_run_tab() -> None:
 
 def _render_gcp_tab() -> None:
     st.markdown("Run rollout/setup and Dataproc Serverless jobs")
+
+    if shutil.which("gcloud") is None:
+        st.warning(
+            "GCP job actions are disabled in this deployment because the gcloud CLI "
+            "is not available in the runtime environment. Use local CLI commands for "
+            "GCP setup and job submission."
+        )
+        st.code(
+            "\n".join(
+                [
+                    "PYTHONPATH=src python -m vfarm.cli gcp-setup --config configs/base.yaml",
+                    "PYTHONPATH=src python -m vfarm.cli gcp-upload --config configs/base.yaml",
+                    "PYTHONPATH=src python -m vfarm.cli gcp-submit-run-all --config configs/base.yaml --wait",
+                ]
+            ),
+            language="bash",
+        )
+        return
 
     c1, c2, c3 = st.columns(3)
     if c1.button("gcp-setup", use_container_width=True):
