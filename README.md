@@ -1,4 +1,4 @@
-# Vertical Farming MIP Demo (Spark + Pyomo + HiGHS)
+# Vertical Farming Mixed Interger Programming Demo (Spark + Pyomo + HiGHS)
 
 Synthetic indoor vertical farm planning demo over a weekly horizon. The project:
 
