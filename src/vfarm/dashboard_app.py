@@ -3,7 +3,6 @@ from __future__ import annotations
 from datetime import datetime
 import json
 from pathlib import Path
-import shutil
 import traceback
 from typing import Any
 
@@ -304,24 +303,10 @@ def _render_local_run_tab() -> None:
 
 def _render_gcp_tab() -> None:
     st.markdown("Run rollout/setup and Dataproc Serverless jobs")
-
-    if shutil.which("gcloud") is None:
-        st.warning(
-            "GCP job actions are disabled in this deployment because the gcloud CLI "
-            "is not available in the runtime environment. Use local CLI commands for "
-            "GCP setup and job submission."
-        )
-        st.code(
-            "\n".join(
-                [
-                    "PYTHONPATH=src python -m vfarm.cli gcp-setup --config configs/base.yaml",
-                    "PYTHONPATH=src python -m vfarm.cli gcp-upload --config configs/base.yaml",
-                    "PYTHONPATH=src python -m vfarm.cli gcp-submit-run-all --config configs/base.yaml --wait",
-                ]
-            ),
-            language="bash",
-        )
-        return
+    st.caption(
+        "These actions call GCP APIs directly using Application Default Credentials "
+        "(no local gcloud binary required). Job submits are async; use batch status to track progress."
+    )
 
     c1, c2, c3 = st.columns(3)
     if c1.button("gcp-setup", use_container_width=True):
@@ -407,7 +392,7 @@ def _render_tech_stack_tab() -> None:
 - **Matplotlib** for report plots
 - **Streamlit** for interactive config/run/results dashboard
 - **GCP Dataproc Serverless + GCS** for scalable Spark execution
-- **gcloud CLI** for infra setup, job submit, and budget controls
+- **Google Cloud APIs (ADC)** for infra setup, job submit, and budget controls
         """
     )
 
