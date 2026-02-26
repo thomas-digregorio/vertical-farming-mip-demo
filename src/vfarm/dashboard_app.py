@@ -50,21 +50,18 @@ def run_dashboard() -> None:
     st.title("Vertical Farming MIP Demo")
     st.caption("Tweak config, run local/GCP workflows, and inspect outputs")
 
-    tabs = st.tabs(["Config", "Run Local", "Run GCP", "Results", "Tech Stack"])
+    tabs = st.tabs(["Config", "Run", "Results", "Tech Stack"])
 
     with tabs[0]:
         _render_config_editor()
 
     with tabs[1]:
-        _render_local_run_tab()
+        _render_run_tab()
 
     with tabs[2]:
-        _render_gcp_tab()
-
-    with tabs[3]:
         _render_results_tab()
 
-    with tabs[4]:
+    with tabs[3]:
         _render_tech_stack_tab()
 
     _render_status_panel()
@@ -285,8 +282,20 @@ def _render_config_editor() -> None:
     cfg["crop_params"] = rebuilt
     cfg["crops"] = [c for c in crops if c in rebuilt]
 
+
+def _render_run_tab() -> None:
+    st.subheader("Run Workflows")
+    st.caption(
+        "Use local actions for end-to-end optimization outputs (solve/report). "
+        "GCP actions submit Spark jobs for cloud execution."
+    )
+    _render_local_run_tab()
+    st.divider()
+    _render_gcp_tab()
+
+
 def _render_local_run_tab() -> None:
-    st.markdown("Run local Spark/Pandas pipeline and optimization")
+    st.markdown("Run Local Spark/Pandas Pipeline and Optimization")
 
     c1, c2, c3, c4, c5 = st.columns(5)
     if c1.button("gen-data", use_container_width=True):
@@ -302,7 +311,7 @@ def _render_local_run_tab() -> None:
 
 
 def _render_gcp_tab() -> None:
-    st.markdown("Run rollout/setup and Dataproc Serverless jobs")
+    st.markdown("Run GCP Setup and Dataproc Serverless Jobs")
     st.caption(
         "These actions call GCP APIs directly using Application Default Credentials "
         "(no local gcloud binary required). Job submits are async; use batch status to track progress."
